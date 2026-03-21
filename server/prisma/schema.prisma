@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionStatus {
+  INACTIVE
+  ACTIVE
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+enum SubscriptionType {
+  MONTHLY
+  YEARLY
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String   @unique
+  avatar    String?
+
+  scores    Score[]
+  results   Result[]
+  subscriptions Subscription[]
+
+  charityId String?
+  charity   Charity? @relation(fields: [charityId], references: [id])
+  contributionPercent Int @default(10)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Score {
+  id        String   @id @default(uuid())
+  value     Int
+  date      DateTime
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+
+  type      SubscriptionType @default(MONTHLY)
+  status    SubscriptionStatus @default(INACTIVE)
+
+  amount    Int
+  startDate DateTime
+  endDate   DateTime
+
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  userId    String
+  user      User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Draw {
+  id        String   @id @default(uuid())
+  numbers   Int[]
+  results   Result[]
+
+  isPublished Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+model Result {
+  id           String   @id @default(uuid())
+
+  userId       String
+  drawId       String
+
+  matchCount   Int
+  prizeAmount  Float
+  status       PaymentStatus @default(PENDING)
+
+  proofUrl     String?
+  isVerified   Boolean @default(false)
+
+  user         User @relation(fields: [userId], references: [id])
+  draw         Draw @relation(fields: [drawId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([drawId])
+}
+
+model Charity {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  image       String?
+
+  users       User[]
+
+  createdAt DateTime @default(now())
+}
