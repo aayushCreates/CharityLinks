@@ -4,7 +4,11 @@ import { getJWT, getPasswordHash, validatePassword } from "../utils/auth.utils";
 const prisma = new PrismaClient();
 
 export const registerUser = async (data: any) => {
-  const { name, email, phone, password } = data;
+  const { name, email, phone, password, charityId, contributionPercent } = data;
+
+  if (contributionPercent && contributionPercent < 10) {
+    throw new Error("Minimum contribution percentage is 10%");
+  }
 
   const hashedPassword = (await getPasswordHash(password)) as string;
 
@@ -14,7 +18,14 @@ export const registerUser = async (data: any) => {
       email,
       phone,
       password: hashedPassword,
+      charityId: charityId || null,
+      contributionPercent: contributionPercent || 10,
     },
+    include: {
+      subscriptions: {
+        where: { status: 'ACTIVE' }
+      }
+    }
   });
 
   const jwt = await getJWT(newUser.id, newUser.email);
@@ -25,6 +36,10 @@ export const registerUser = async (data: any) => {
       name: newUser.name,
       email: newUser.email,
       phone: newUser.phone,
+      charityId: newUser.charityId,
+      contributionPercent: newUser.contributionPercent,
+      isAdmin: newUser.isAdmin,
+      subscriptions: newUser.subscriptions
     },
     token: jwt,
   };
@@ -35,6 +50,13 @@ export const loginUser = async (data: any) => {
 
   const user = await prisma.user.findUnique({
     where: { email },
+    include: {
+      subscriptions: {
+        where: { status: 'ACTIVE' },
+        orderBy: { createdAt: 'desc' },
+        take: 1
+      }
+    }
   });
 
   if (!user) {
@@ -55,6 +77,10 @@ export const loginUser = async (data: any) => {
       name: user.name,
       email: user.email,
       phone: user.phone,
+      isAdmin: user.isAdmin,
+      charityId: user.charityId,
+      contributionPercent: user.contributionPercent,
+      subscriptions: user.subscriptions
     },
     token: jwt,
   };
@@ -62,6 +88,17 @@ export const loginUser = async (data: any) => {
 
 export const findUserByEmail = async (email: string) => {
     return await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        include: {
+            subscriptions: {
+                where: {
+                    status: 'ACTIVE'
+                },
+                take: 1,
+                orderBy: {
+                    createdAt: 'desc'
+                }
+            }
+        }
     });
 };

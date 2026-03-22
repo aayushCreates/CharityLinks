@@ -7,7 +7,7 @@ export const register = async (
   next: NextFunction
 ) => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, charityId, contributionPercent } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res.status(400).json({
@@ -16,7 +16,14 @@ export const register = async (
       });
     }
 
-    const result = await registerUser({ name, email, phone, password });
+    const result = await registerUser({ 
+      name, 
+      email, 
+      phone, 
+      password, 
+      charityId, 
+      contributionPercent 
+    });
 
     res.status(200).json({
       success: true,
@@ -26,7 +33,7 @@ export const register = async (
     });
   } catch (err: any) {
     console.error("Error in the register user controller", err);
-    return res.status(500).json({
+    return res.status(400).json({
       success: false,
       message: err.message || "Server Error in registration of user, please try again",
     });
